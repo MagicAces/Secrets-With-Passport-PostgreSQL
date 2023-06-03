@@ -1,8 +1,8 @@
 const crypto = require("crypto");
 const queries = require(__dirname + "/query");
 const pool = require("../db");
-const md5 = require("md5");
-
+const bcrypt  = require("bcrypt");
+const saltRounds = 11;
 
 const getHome = (req, res) => {
     res.render("home");
@@ -19,21 +19,37 @@ const getLogin = (req, res) => {
 const addUser = (req, res) => {
     const {username, password} = req.body;
     
-    pool.query(queries.addUser, [username, md5(password)], (err, results) => {
-        err ? res.render(err) : res.render("secrets");
-    });
+    bcrypt.hash(password, saltRounds, (err, hash) => {
+        if(!err) {
+            pool.query(queries.addUser, [username, hash], (error, results) => {
+                error ?
+                    res.render("/register"):
+                    res.render("secrets");
+            });
+        }
+        else
+            res.send(err);
+    });    
 };
 
 const verifyUser = (req, res) => {
     const {username, password} = req.body;
     
-    pool.query(queries.verifyUser, [username, md5(password)], (err, results) => {
+    pool.query(queries.verifyUser, [username], (err, results) => {
         if(err)
             res.send(err)
         else {
-            results.rows.length ?
-                res.render("secrets"):
-                res.redirect("/login");
+            if(results.rows.length) {
+                results.rows.forEach(user => {
+                    bcrypt.compare(password, user.password, (error, result) => {
+                        result ?
+                            res.render("secrets") :
+                            res.redirect("/login");
+                    });
+                })
+            } else {
+                res.render("/login");
+            }
         }
     });
 }
