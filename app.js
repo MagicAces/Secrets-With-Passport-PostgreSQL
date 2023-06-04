@@ -4,6 +4,7 @@ const bodyParser = require("body-parser");
 const session = require("express-session");
 const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const ejs = require("ejs");
 const controller = require(__dirname + "/src/controller");
 
@@ -28,14 +29,38 @@ passport.use(
             usernameField: "email",
             passwordField: "password"
         },
-        controller.userStrategy
+        controller.localStrategy
     )
 );
 
+passport.use(
+    new GoogleStrategy({
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: "http://localhost:4000/auth/google/secrets"
+    },
+    controller.googleStrategy)
+);
 passport.serializeUser(controller.serializeUser);
 passport.deserializeUser(controller.deserializeUser);
 
 app.get("/", controller.getHome);
+
+app.get('/auth/google',
+    passport.authenticate('google', {
+        scope: ['profile', 'email', 'https://www.googleapis.com/auth/user.emails.read',
+            'https://www.googleapis.com/auth/userinfo.email', 'openid']
+    })
+);
+
+app.get('/auth/google/secrets',
+    passport.authenticate('google', { failureRedirect: '/login' }),
+    function (req, res) {
+        // Successful authentication, redirect to secrets.
+        res.redirect('/secrets');
+    }
+);
+
 app.get("/register", controller.getRegister);
 app.get("/login",  controller.getLogin);
 app.get("/secrets", controller.getSecrets);

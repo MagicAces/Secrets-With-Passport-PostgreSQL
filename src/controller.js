@@ -15,9 +15,17 @@ const User = {
         return results;
         
     },
+    findByGoogleId: async (googleId) => {
+        const results = await pool.query(queries.verifyGoogleId, [googleId]);
+        return results;
+    },
     createUser: async (email, password) => {
         const hash = await bcrypt.hash(password, saltRounds);
         const results = await pool.query(queries.addUser, [email, hash]);
+        return results;
+    },
+    addByGoogleId: async (email, id) => {
+        const results = await pool.query(queries.addByGoogleId, [email, id]);
         return results;
     }
 }
@@ -79,7 +87,7 @@ const verifyUser = (req, res) => {
         });
 }
 
-const userStrategy = async (email, password, done) => {
+const localStrategy = async (email, password, done) => {
     try {
         const results = await User.findByEmail(email);
 
@@ -96,6 +104,25 @@ const userStrategy = async (email, password, done) => {
         return done(err);
     }
 };
+
+const googleStrategy = async (accessToken, refreshToken, profile, cb) => {
+    try {
+        console.log(profile);
+        console.log(accessToken);
+        console.log(refreshToken);
+
+        const results = await User.findByGoogleId(profile.id);
+
+        if(results.rows[0])
+            return cb(null, results.rows[0]);
+       
+        const { rows } = await User.addByGoogleId(profile._json.email, profile.id);
+        return cb(null, rows[0]);
+    
+    } catch(err) {
+        return cb(err);
+    }
+}
 
 const serializeUser = (user, done) => {
     done(null, user.id);
@@ -135,7 +162,8 @@ module.exports = {
     getSecrets,
     addUser,
     verifyUser,
-    userStrategy,
+    localStrategy,
+    googleStrategy,
     serializeUser,
     deserializeUser
 }
