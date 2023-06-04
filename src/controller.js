@@ -27,6 +27,14 @@ const User = {
     addByGoogleId: async (email, id) => {
         const results = await pool.query(queries.addByGoogleId, [email, id]);
         return results;
+    },
+    addSecret: async (id, secret) => {
+        const { rows } = await pool.query(queries.addSecret, [secret, id]);
+        return rows[0];
+    },
+    getSecrets: async () => {
+        const { rows } = await pool.query(queries.getSecrets);
+        return rows;
     }
 }
 
@@ -142,16 +150,43 @@ const deserializeUser = async (id, done) => {
 };
 
 const getSecrets = (req, res) => {
-    if(req.isAuthenticated())  
-        res.render("secrets");
+    const result = User.getSecrets();
+
+    result
+        .then(secrets => {
+            res.render("secrets", { secrets: secrets });
+        })
+        .catch(err => {
+            res.redirect("/submit");
+        });
+    
+}
+
+const getSubmit = (req, res) => {
+    if (req.isAuthenticated())
+        res.render("submit");
     else
         res.redirect("/login");
-}
+};
 
 const getLogout = (req, res) => {
     req.logout(function (err) {
         res.redirect("/");
     });
+}
+
+const addSecret = (req, res) => {
+    const secret = req.body.secret;
+
+    const result = User.addSecret(req.user.id, secret);
+
+    result
+        .then(user => {
+            res.redirect("/secrets");
+        })
+        .catch(err => {
+            res.redirect("/login");
+        });
 }
 
 module.exports = {
@@ -160,7 +195,9 @@ module.exports = {
     getLogin,
     getLogout,
     getSecrets,
+    getSubmit,
     addUser,
+    addSecret,
     verifyUser,
     localStrategy,
     googleStrategy,

@@ -64,9 +64,11 @@ app.get('/auth/google/secrets',
 app.get("/register", controller.getRegister);
 app.get("/login",  controller.getLogin);
 app.get("/secrets", controller.getSecrets);
+app.get("/submit", controller.getSubmit);
 app.get("/logout", controller.getLogout);
 app.post("/register", controller.addUser);
 app.post("/login", controller.verifyUser);
+app.post("/submit", controller.addSecret);
 
 app.listen(4000, () => {
     console.log("Server listening on port 4000");
